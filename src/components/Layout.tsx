@@ -30,8 +30,49 @@ export function Layout({ children, theme, onToggleTheme, glitching }: Props) {
   const { t, i18n } = useTranslation()
   const mainRef = useRef<HTMLDivElement>(null!)
   const busyRef = useRef(false)
-  const scramble = useScrambleSwitch()
+  const scrambleCtrl = useScrambleSwitch()
   const [copied, setCopied] = useState(false)
+  const footerRef = useRef<HTMLSpanElement>(null!)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const frameRef = useRef(0)
+  const SYMS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~'
+
+  const handleHover = useCallback(() => {
+    const first = footerRef.current.firstChild
+    if (first && first.nodeType === Node.TEXT_NODE) {
+      const node = first as Text
+      const target = node.textContent || ':)'
+      let frame = 0
+      const frames = 12
+      function tick() {
+        const revealed = Math.floor((frame / frames) * target.length)
+        let out = ''
+        for (let i = 0; i < target.length; i++) {
+          out += i < revealed ? target[i] : SYMS[Math.floor(Math.random() * SYMS.length)]
+        }
+        node.textContent = out
+        frame = (frame + 1) % (frames + 1)
+        frameRef.current = requestAnimationFrame(tick)
+      }
+      frameRef.current = requestAnimationFrame(tick)
+    }
+    if (!audioRef.current) {
+      audioRef.current = new Audio('/).mp3')
+      audioRef.current.volume = 0.15
+      audioRef.current.loop = true
+    }
+    audioRef.current.currentTime = 0
+    audioRef.current.play().catch(() => {})
+  }, [SYMS])
+
+  const handleLeave = useCallback(() => {
+    cancelAnimationFrame(frameRef.current)
+    frameRef.current = 0
+    if (audioRef.current) {
+      audioRef.current.pause()
+    }
+    footerRef.current.textContent = ':)'
+  }, [])
 
   const handleDiscordCopy = useCallback(async () => {
     try {
@@ -44,12 +85,12 @@ export function Layout({ children, theme, onToggleTheme, glitching }: Props) {
   const handleLangChange = useCallback((nextLang: string) => {
     if (busyRef.current || !mainRef.current) return
     busyRef.current = true
-    scramble.play(mainRef.current, (next) => {
+    scrambleCtrl.play(mainRef.current, (next) => {
       i18n.changeLanguage(nextLang).then(() => next())
     }, () => {
       busyRef.current = false
     })
-  }, [i18n, scramble])
+  }, [i18n, scrambleCtrl])
 
   return (
     <div className={`min-h-screen bg-light-bg dark:bg-dark-bg text-gray-800 dark:text-gray-200 transition-colors duration-300 bg-grid ${glitching ? 'glitch-active' : ''}`}>
@@ -90,7 +131,7 @@ export function Layout({ children, theme, onToggleTheme, glitching }: Props) {
       </main>
 
       <footer className="text-center py-8 text-[11px] text-gray-500 border-t border-white/5">
-        :)
+        <span ref={footerRef} onMouseEnter={handleHover} onMouseLeave={handleLeave} className="cursor-default">:)</span>
       </footer>
     </div>
   )

@@ -29,7 +29,7 @@ function randSym(): string {
   return SYMS[Math.floor(Math.random() * SYMS.length)]
 }
 
-function scramble(node: Text, target: string, frames: number, done: () => void) {
+export function scramble(node: Text, target: string, frames: number, done: () => void) {
   let frame = 0
   const len = target.length
   function tick() {
